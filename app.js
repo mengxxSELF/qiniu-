@@ -3,8 +3,9 @@ const app = new Koa()
 const views = require('koa-views')
 const json = require('koa-json')
 const onerror = require('koa-onerror')
-const bodyparser = require('koa-bodyparser')
+const koaBody = require('koa-body')
 const logger = require('koa-logger')
+const cors = require('koa-cors');
 
 const index = require('./routes/index')
 const users = require('./routes/users')
@@ -13,12 +14,19 @@ const users = require('./routes/users')
 onerror(app)
 
 // middlewares
-app.use(bodyparser({
-  enableTypes:['json', 'form', 'text']
-}))
 app.use(json())
 app.use(logger())
+app.use(cors())
 app.use(require('koa-static')(__dirname + '/public'))
+app.use(koaBody({
+  multipart: true,
+  formidable: {
+    // 设置上传文件大小最大限制，默认2M
+    maxFileSize: 200 * 1024 * 1024,
+  }
+}))
+
+
 
 // // global middlewares
 app.use(views('views', {

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Document</title>
+</head>
+<body>
+  <input type="file">
+  <script>
+    const path = 'http://localhost:3000/users/upload'
+
+    function base64ToBlob(dataurl) {
+        var arr = dataurl.split(','),
+          mime = arr[0].match(/:(.*?);/)[1],
+          bstr = atob(arr[1]),
+          n = bstr.length,
+          u8arr = new Uint8Array(n);
+        while (n--) {
+          u8arr[n] = bstr.charCodeAt(n);
+        }
+        return new Blob([u8arr], { type: mime });
+      }
+
+   
+document.querySelector('input').onchange = () => {
+  const file = document.querySelector('input').files[0]
+
+  const reader = new FileReader();
+  reader.readAsDataURL(file);
+  reader.onload = function (e) {
+    const urlData = this.result;
+
+    let formData = new FormData()
+    formData.append('img', base64ToBlob(urlData))
+    // console.log(formData, 'formData');
+
+    fetch(path, {
+      body: formData,
+      credentials: 'same-origin', // include, same-origin, *omit
+      method: 'POST', // *GET, POST, PUT, DELETE, etc.
+    })
+  }
+}
+  </script>
+</body>
+</html>

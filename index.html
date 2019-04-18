@@ -48,8 +48,8 @@
     };
 
 
-    inputTarget.onchange = (data) => {
-      const imgfile = inputTarget.files[0]
+    document.querySelector('input').onchange = (data) => {
+      const imgfile = document.querySelector('input').files[0]
       if (imgfile) {
         const reader = new FileReader();
         reader.readAsDataURL(imgfile);
