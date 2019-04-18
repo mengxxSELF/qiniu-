@@ -4,9 +4,9 @@ const qiniu = require('qiniu')
 router.prefix('/users')
 
 const bucket = 'cancan'
-const accessKey = '2LC7KPjwnYdcfXbUZVcbhscpwo3iV3WS8rWrNoz3'
-const secretKey = 'SXrdqdvo9nkKQ2SxaJkwbXfVnrs2XXYlS1-YlnBp'
-const domain = 'http://pq3smgjbr.bkt.clouddn.com'
+const accessKey = '2LC7KPjwnYdcxxx'
+const secretKey = 'SXrdqdvoxxx'
+const domain = 'http://pqxxx'
 
 function get_token () {
   const mac = new qiniu.auth.digest.Mac(accessKey, secretKey);
