@@ -1,0 +1,1 @@
+import '../componter/index.js'

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <link rel="stylesheet" href="https://cdn.bootcss.com/bootstrap/4.0.0/css/bootstrap.min.css"
+    integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+  <title>Document</title>
+</head>
+
+<body>
+  <form>
+    <div class="form-group">
+      <label for="exampleFormControlFile1">Example file input</label>
+      <input type="file" class="form-control-file" id="exampleFormControlFile1">
+      <img />
+    </div>
+  </form>
+  <script src="https://unpkg.com/qiniu-js/dist/qiniu.min.js"></script>
+  <script>
+
+    function base64ToBlob(dataurl) {
+      var arr = dataurl.split(','),
+        mime = arr[0].match(/:(.*?);/)[1],
+        bstr = atob(arr[1]),
+        n = bstr.length,
+        u8arr = new Uint8Array(n);
+      while (n--) {
+        u8arr[n] = bstr.charCodeAt(n);
+      }
+      return new Blob([u8arr], { type: mime });
+    }
+
+
+    // token 应该是接口传过来的，这里我直接写了
+    const token = '2LC7KPjwnYdcfXbUZVcbhscpwo3iV3WS8rWrNoz3:HiLtxTxRcV2DbWaLReANWxDwKQA=:eyJzY29wZSI6ImNhbmNhbiIsImRlYWRsaW5lIjoxNTU1NTIyNTc2fQ=='
+
+    const config = {
+      useCdnDomain: true,
+      // region 需要根据自己的空间所在区域填写 z0为华东区域
+      region: qiniu.region.z0
+    };
+
+    const putExtra = {
+      fname: "",
+      params: {},
+      mimeType: [] || null
+    };
+
+
+    inputTarget.onchange = (data) => {
+      const imgfile = inputTarget.files[0]
+      if (imgfile) {
+        const reader = new FileReader();
+        reader.readAsDataURL(imgfile);
+        reader.onload = function (e) {
+          const urlData = this.result;
+          // base64转为 blob格式
+          const blobData = base64ToBlob(urlData)
+          // console.log(blobrest, 'blobrest');
+          
+          // const observable = qiniu.upload(urlData, key, token, putExtra, config)
+          const observable = qiniu.upload(blobData, key, token, putExtra, config)
+          const observer = {
+            next(res) {
+              // console.log(res);
+            },
+            error(err) {
+              // console.log(err);
+            },
+            complete(res) {
+              console.log(res);
+              // 这里拿到res 进行图片的拼接
+
+              document.querySelector('img').setAttribute('src', `${wwwdomain}/${key}`)
+
+            }
+          }
+          const subscription = observable.subscribe(observer)
+        };
+
+      }
+    }
+
+  </script>
+</body>
+
+</html>
