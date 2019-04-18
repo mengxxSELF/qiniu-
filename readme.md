@@ -1,6 +1,141 @@
 
 ![](https://user-gold-cdn.xitu.io/2019/4/18/16a2c2031196dda2?w=1168&h=364&f=png&s=218162)
 
+### 服务端进行上传
+
+服务端将图片源传递到七牛，这种方式的流程是 
+
+1 前端将图片传到自己的服务器
+2 在server将文件传递到七牛
+
+* [API](https://developer.qiniu.com/kodo/sdk/1289/nodejs#form-upload-file)
+
+#### 前端
+
+需要注意，要使用 formData 格式进行文件上传， 关于 [formData](https://developer.mozilla.org/zh-CN/docs/Web/API/FormData) 
+
+```js
+document.querySelector('input').onchange = () => {
+  const file = document.querySelector('input').files[0]
+
+  const reader = new FileReader();
+  reader.readAsDataURL(file);
+  
+  reader.onload = function (e) {
+    const urlData = this.result;
+
+    // 构建上传对象
+    let formData = new FormData()
+    // base64ToBlob - 转blob 下文有提到 这里暂时不展开了
+    formData.append('img', base64ToBlob(urlData))
+  
+    // fetch调用接口
+    fetch(path, {
+      body: formData,
+      credentials: 'same-origin',
+      method: 'POST'
+    })
+  }
+}
+```
+
+#### server 接口部分
+
+* 基本参数
+
+```js
+const bucket = 'cancan'
+const accessKey = '2LC7KPjwnYdxxxc'
+const secretKey = 'SXrxxx'
+const domain = 'http://pq3xxxdn.com'
+```
+
+* 获取token
+
+```js
+function get_token () {
+  const mac = new qiniu.auth.digest.Mac(accessKey, secretKey);
+  const policyParams = { scope: bucket }
+  const putPolicy = new qiniu.rs.PutPolicy(policyParams);
+  const uploadToken = putPolicy.uploadToken(mac);
+  return uploadToken
+}
+```
+
+* 拿到文件path之后进行七牛上传
+
+```js
+async function uploadFile(localFile, key) {
+  const uploadToken = get_token()
+
+  const config = new qiniu.conf.Config();
+  // 空间对应的机房
+  config.zone = qiniu.zone.Zone_z0;
+
+  const formUploader = new qiniu.form_up.FormUploader(config);
+  const putExtra = new qiniu.form_up.PutExtra();
+
+  return new Promise((resolve, reject) => {
+    // 文件上传
+    formUploader.putFile(uploadToken, key, localFile, putExtra, function (respErr, respBody, respInfo) {
+      if (respErr) {
+        reject('error')
+      }
+      if (respInfo.statusCode == 200) {
+        const { key } = respBody
+        resolve(`${domain}/${key}`)
+      } 
+    });
+  })
+}
+```
+
+* 接口
+
+```js
+router.post('/upload', async (ctx) => {
+  // 获取到上传到服务器的文件信息
+  const { img } = ctx.request.files
+  // path 拿到临时文件地址
+  const { path } = img
+
+  // key 是给图片的命名
+  const key = Math.random() * 100 + '.png'
+
+  const result = await uploadFile(path, key)
+
+  ctx.body = result
+})
+```
+
+#### 遇到的问题
+
+* post 接口 始终无法解析到file参数
+
+后来发现是因为 中间件只使用了 koa-bodyparser， 一般图片上传使用的是 koa-multer，可以使用 koa-body来代替这两个
+
+[参考文章](http://www.ptbird.cn/koa-body.html)
+
+* 临时文件占用大量磁盘空间
+
+可以看到，在将文件上传到服务器的时候，会创建一个临时文件- 接口中解析的那个 path 
+
+![path](https://user-gold-cdn.xitu.io/2019/4/18/16a307f8adedef5f?w=718&h=29&f=png&s=9811)
+
+对于服务器，可以写一个定时的脚本去清除这些文件。或者我们在脚本增加一段逻辑，在成功上传到七牛之后，手动将临时文件进行删除
+
+```js
+fs.unlink(path, (err) => {
+  if (err) throw err;
+  console.log('文件已删除', path);
+})
+```
+
+* [git地址 - server ](https://github.com/mengxxSELF/qiniu-/blob/master/routes/users.js)
+* [git地址 - html ](https://github.com/mengxxSELF/qiniu-/blob/master/upload.html)
+
+### 前端直接上传
+
 项目中的例子涉及到的图片上传，都是将文件上传到服务器然后再去传到七牛空间，这种操作方式，相当于在自己的服务器做了一层中转站。开发者可以在中转站对图片做一些处理然后在传到七牛空间。但是有一些缺点
 
 * 内存占用量增大
@@ -21,8 +156,6 @@
 
 #### 获取上传凭证 token
 
-[git](https://github.com/mengxxSELF/qiniu-/blob/master/routes/users.js)
-
 ```js
 router.get('/qiniu', async (ctx, next) => {
   const bucket = 'activity'
@@ -38,13 +171,6 @@ router.get('/qiniu', async (ctx, next) => {
 ```
 
 #### 前端上传代码
-
-##### html
-
-```html
-<input type="file" />
-```
-#### js
 
 * base64转 blob
 
@@ -118,8 +244,12 @@ inputTarget.onchange = (data) => {
 
 在七牛创建一个新空间的话，会提供一个30天的免费域名可以使用
 
+* [git地址 - server ](https://github.com/mengxxSELF/qiniu-/blob/master/routes/users.js)
 
-#### 遇到的坑
+* [git地址 - html ](https://github.com/mengxxSELF/qiniu-/blob/master/index.html)
+
+
+#### 遇到的问题
 
 * cdnUphost 解析失败
 
@@ -155,5 +285,68 @@ inputTarget.onchange = (data) => {
 
 是因为第一次的时候，直接将 input的files[0] 值上传，但其实这个的格式是base64，而文档里对这个参数的要求是blob，所以记得这里需要转化一下文件格式
 
-
 以前的demo写的一直失败就搁置了，今天重新跑了一次，再次吐槽七牛的文档，写的真是让人头大
+
+### 编写 webpack 上传七牛的插件
+
+涉及到的一些文档
+
+* [webpack plugin API](https://www.webpackjs.com/concepts/plugins/)
+ 
+* [webpack plugin config](https://www.webpackjs.com/api/compiler-hooks/)
+
+#### plugin 使用
+
+```js
+    // 这个是编译文件编译到的文件夹
+    const filePath = path.resolve(__dirname, 'public')
+    
+    new QiuniuUploadPlugin({
+      bucket,
+      accessKey,
+      secretKey,
+      domain,
+      path: filePath
+    })
+```
+
+#### 类的实现
+
+这个的逻辑大部分和从后端直接上传到七牛有重合，这里只把另一部分写出来
+
+* 大致实现
+
+```js
+class QiuniuUploadPlugin {
+  constructor () {...}
+  
+  uploadQn (filename) {...}
+  
+  apply (compiler) {
+    const pluginName = 'QiuniuUploadPlugin'
+    // 事件钩子
+    compiler.hooks.run.tap(pluginName, compilation => {
+      console.log("webpack 构建过程开始！")
+    });
+
+    // afterEmit - 生成资源到 output 目录之后将触发  异步钩子 - tapPromise
+    compiler.hooks.afterEmit.tapPromise(pluginName, (compilation) => {
+      let { assets } = compilation
+      // assets 这里拿到的assets个对象 key是文件名 value是先关参数
+      // assets -->>>  { 'index.js' : xxxx }
+
+      // 遍历所有的文件 进行七牛的上传
+      const allUplaod = Object.keys(assets).map((item) => {
+        return this.uplaodQn(item)
+      })
+
+      return Promise.all(allUplaod)
+
+    })
+  }
+}
+
+```
+
+* [git - webpack](https://github.com/mengxxSELF/qiniu-/blob/master/webpack.config.js)
+* [git - plugin](https://github.com/mengxxSELF/qiniu-/blob/master/qiniu-webpack-plugin.js)
