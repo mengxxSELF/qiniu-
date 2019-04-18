@@ -5,8 +5,8 @@ router.prefix('/users')
 
 router.get('/qiniu', async (ctx, next) => {
   const bucket = 'cancan'
-  const accessKey = '2LC7KPjwnYdcfXbUZVcbhscpwo3iV3WS8rWrNoz3'
-  const secretKey = 'SXrdqdvo9nkKQ2SxaJkwbXfVnrs2XXYlS1-YlnBp'
+  const accessKey = '2LC7KPjwnYxxxWS'
+  const secretKey = 'SXxxxXfVnrs2xx'
 
   const mac = new qiniu.auth.digest.Mac(accessKey, secretKey);
   const policyParams = { scope: bucket }

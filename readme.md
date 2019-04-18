@@ -21,6 +21,8 @@
 
 #### 获取上传凭证 token
 
+[git](https://github.com/mengxxSELF/qiniu-/blob/master/routes/users.js)
+
 ```js
 router.get('/qiniu', async (ctx, next) => {
   const bucket = 'activity'
