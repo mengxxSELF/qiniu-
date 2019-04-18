@@ -1,1 +1,2 @@
-import '../componter/index.js'
+const time = '2019'
+console.log(time, 'time')
