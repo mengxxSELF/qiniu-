@@ -13,6 +13,11 @@ const users = require('./routes/users')
 // error handler
 onerror(app)
 
+function getUploadFileExt(name) {
+  let ext = name.split('.');
+  return ext[ext.length - 1];
+}
+
 // middlewares
 app.use(json())
 app.use(logger())
@@ -23,7 +28,13 @@ app.use(koaBody({
   formidable: {
     // 设置上传文件大小最大限制，默认2M
     maxFileSize: 200 * 1024 * 1024,
-  }
+    // keepExtensions: true,
+    onFileBegin: (name, file) => {
+      // 获取文件后缀
+      const ext = getUploadFileExt(file.name);
+      file.originname = name + ext
+    },
+  },
 }))
 
 
